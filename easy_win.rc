@@ -1,0 +1,103 @@
+#########################
+#			            #
+# Easy_Win.rc		    #
+#			            #
+# 		        ~voodoo #
+#########################
+
+<ruby>
+
+#print help function and usage
+def help_me
+	help=%Q|
+	Description:
+		This MSF resource file will automate searching for common
+		exploitable services on a target network such as SMB, FTP,
+		MSSQL, and open VNC Servers.
+		There is no shame in an easy win
+		~voodoo
+	
+	usage:
+		./msfconsole -r easy_win.rc [options]
+	arguments:
+		help 		- displays help menu
+		user 		- database user
+		pass 		- database password
+		workspace 	- workspace
+	Author:
+		voodoo <voodoo.secure@gmail.com>
+
+	|
+
+	help = help.gsub(/^\t/, '')
+	print_line(help)
+end
+
+#
+# Load and execute module
+#
+def load_module(path, targets)
+	mod = framework.modules.create(path)
+	print_status("Loading #{mod.shortname}")
+	run_single("use #{mod.fullname}")
+	run_single("set RHOSTS #{targets}")
+	run_single("run")
+	run_single("back")
+end
+
+#
+# init_args
+#
+def init_args
+	args = {}
+	if ARGV.join('') =~ /^help$/i
+		args[:help] = true
+		return args
+	end
+	datastore		= framework.datastore
+	args[:db_user]		= ARGV.shift || datastore['DB_USER'] || ''
+	args[:db_pass]		= ARGV.shift || datastore['DB_PASS'] || ''
+	args[:db_workspace]	= ARGV.shift || datastore['DB_WORKSPACE'] || ''
+
+	return args
+end
+
+def db_connected?
+	begin
+		framework.db.hosts
+		return true
+	rescue::ActiveRecord::ConnectionNotEstablished
+		return false
+	end
+end
+
+#
+# Main function 
+#
+begin
+
+	Targets="192.168.1.1"
+
+	SMB_Scanner	= "auxiliary/scanner/smb/ms08_067_check"
+	FTP_Scanner	= "auxiliary/scanner/ftp/ftp_version"
+	VNC_Scanner	= "auxiliary/scanner/vnc/vnc_none_auth"
+
+	args=init_args
+	if args[:help]
+		help_me
+		return
+	else
+		if not db_connected?
+			print("Error.  Database Not Connected\n")
+		else 
+			##print("Yay, database connected!\n")
+		end
+	end
+	print_status("\nStarting Easy Win Scanner\n")
+	print("====================================\n")
+	#load_module(SMB_Scanner, Targets)
+	load_module(FTP_Scanner, Targets)
+	load_module(VNC_Scanner, Targets)
+
+end
+</ruby>
